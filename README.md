@@ -20,4 +20,3 @@ Press the button to send an email.
 
 Possible Expansions
 This project can be expanded by replacing the button with a motion sensor or another type of sensor. This way, ESP32 can automatically send an email when movement is detected.
-
