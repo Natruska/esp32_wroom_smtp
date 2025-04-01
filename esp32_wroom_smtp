@@ -1,0 +1,117 @@
+#include <WiFi.h>
+#include <ESP_Mail_Client.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+//WiFi information
+const char* ssid = "Homewifi";                                // Change to your own WiFi network
+const char* password = "Password";                            // Change to your own WiFi password
+
+// SMTP server information
+#define SMTP_HOST "mail.com"                                  // Change details
+#define SMTP_PORT 666                                         // Change port
+
+// Email
+const char* smtpUser = "example@gmail.com";                   // Email information
+const char* smtpPass = "Password";                            // Application password or traditional password
+
+// Sender and recipient
+const char* lahettajaNimi = "example";                        // Sender name
+const char* vastaanottaja = "example@gmail.com";              // Where should the email be sent?
+
+// SMTP Client
+SMTPSession smtp;
+
+// NTP 
+const char* ntpServer = "time.google.com";                    // NTP server
+const long gmtOffset_sec = 3600;                              // Change time!
+const int daylightOffset_sec = 0;        
+const long utcOffsetInSeconds = gmtOffset_sec + daylightOffset_sec;
+
+WiFiUDP udp;
+NTPClient timeClient(udp, ntpServer, utcOffsetInSeconds);
+
+// Button
+const int buttonPin = 12;                                     // Button connection (define the pin to use)
+
+void lahetaSahkoposti() {
+    SMTP_Message viesti;
+
+    viesti.sender.name = lahettajaNimi;
+    viesti.sender.email = smtpUser;
+
+    // Message subject and content
+    viesti.subject = "Example";                               // Change subject text
+    viesti.addRecipient("Saaja", vastaanottaja);
+    viesti.text.content = "Example";                          // Change content 
+    viesti.text.charSet = "utf-8";
+
+    // SMTP connection settings (no changes needed)
+    ESP_Mail_Session smtpSession;
+    smtpSession.server.host_name = SMTP_HOST;
+    smtpSession.server.port = SMTP_PORT;
+    smtpSession.login.email = smtpUser;
+    smtpSession.login.password = smtpPass;
+    smtpSession.login.user_domain = "";
+
+    smtpSession.secure.startTLS = true;
+
+    smtp.debug(1);
+    smtp.callback([](SMTP_Status status) {
+        Serial.println(status.info());
+    });
+
+    Serial.println("Attempting to connect to SMTP...");
+    if (!smtp.connect(&smtpSession)) {
+        Serial.println("SMTP connection failed!");
+        return;
+    }
+
+    if (!MailClient.sendMail(&smtp, &viesti)) {
+        Serial.println("Email sending failed.");
+        Serial.println(smtp.errorReason());
+    } else {
+        Serial.println("Email sent successfully!!");
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    
+    // Connecting to WiFi
+    Serial.print("Connecting to WiFi...");
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("Connected to WiFi!");
+
+    // Setting time from NTP
+    timeClient.begin();
+    while (!timeClient.update()) {
+        timeClient.forceUpdate();
+        delay(1000);
+    }
+
+    Serial.println("Time synchronized!");
+    pinMode(buttonPin, INPUT_PULLUP); 
+
+    // Displaying current time before synchronization
+    Serial.print("Current time before synchronization: ");
+    Serial.println(timeClient.getFormattedTime());
+    
+    // Displaying current time
+    Serial.print("Current time after synchronization: ");
+    Serial.println(timeClient.getFormattedTime());
+}
+
+void loop() {
+    int buttonState = digitalRead(buttonPin); 
+
+    if (buttonState == LOW) {
+        Serial.println("Button pressed, sending email...");
+        lahetaSahkoposti();  
+        delay(1000);                                         // Waiting a moment to prevent multiple sends too quickly
+    }
+}
