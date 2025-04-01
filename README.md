@@ -1,4 +1,4 @@
-ESP32 WROOM - Send Email on Button Press
+ESP32 WROOM - Send Email on Button Press. 
 This project uses the ESP32 WROOM microcontroller to send an email when a button is pressed. The ESP32 connects to a WiFi network and uses an SMTP server to send the message.
 
 Features
